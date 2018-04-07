@@ -37,9 +37,9 @@ def extract_feature(df, is_train):
         'Age',
         'Sex',
         'Fare',
-        'Embarked',
+        # 'Embarked',
         # 'Cabin',
-        # 'Parch',
+        'Parch',
     ]
 
     y = None
@@ -53,8 +53,11 @@ def extract_feature(df, is_train):
     else:
         x = df[columns].fillna(0) # TODO: 適当すぎる
 
-    x['Sex'] = process_sex(df)
-    x['Embarked'] = process_embarked(df)
+    if 'Sex' in x:
+        x['Sex'] = process_sex(df)
+
+    if 'Embarked' in x:
+        x['Embarked'] = process_embarked(df)
 
     if 'Cabin' in x:
         x['Cabin'] = process_cabin(df)
@@ -70,7 +73,8 @@ def main():
     df = pd.read_csv('./input/train.csv')
     x, y = extract_feature(df, is_train=True)
 
-    train_x, val_x, train_y, val_y = train_test_split(x, y, test_size=0.3)
+    train_x, val_x, train_y, val_y = train_test_split(
+        x, y, test_size=0.3, random_state=1, stratify=y)
 
     lr = LogisticRegression()
     lr.fit(train_x, train_y)
@@ -83,11 +87,12 @@ def main():
     test_df = pd.read_csv('./input/test.csv')
     test_x, _ = extract_feature(test_df, is_train=False)
 
-    pred = pd.Series(lr.predict(test_x))
-
-    result = pd.concat([test_df['PassengerId'], pred], axis=1)
-    result.to_csv('./submissions/output.csv',
-                  index=False, header=['PassengerId', 'Survived'])
+    pred = lr.predict(test_x)
+    result = pd.DataFrame({
+        'PassengerId': test_df.PassengerId,
+        'Survived': pred
+        })
+    result.to_csv('./submissions/output.csv', index=False)
 
 
 if __name__ == '__main__':
