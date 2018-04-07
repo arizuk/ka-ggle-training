@@ -18,7 +18,6 @@ def process_embarked(df):
             return 3
         else:
             return 0
-
     return df.Embarked.apply(convert)
 
 
