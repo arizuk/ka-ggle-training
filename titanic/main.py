@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 
 
 def process_age(df):
@@ -19,7 +20,8 @@ def process_embarked(df):
 
 
 def process_cabin(df):
-    return df.Cabin
+    cabin = df.Cabin.fillna('U').astype(str)
+    return cabin.apply(lambda x: 0 if x[0] == 'U' else 1)
 
 
 def create_familzy_size(df):
@@ -31,8 +33,10 @@ def extract_feature(df, is_train):
     sex = process_sex(df)
     embarked = process_embarked(df)
     cabin = process_cabin(df)
-    family_size = create_familzy_size(df)
     fare = df.Fare.fillna(df.Fare.dropna().mean())
+
+    family_size = create_familzy_size(df)
+    is_alone = family_size.apply(lambda x: 1 if x == 1 else 0)
 
     x = pd.DataFrame({
         'Pclass': df.Pclass,
@@ -40,8 +44,9 @@ def extract_feature(df, is_train):
         'Sex': sex,
         'Fare': fare,
         'Embarked': embarked,
-        # 'Cabin': cabin,
+        'Cabin': cabin,
         'FamilySize': family_size,
+        # 'IsAlone': is_alone,
     })
     # print(pd.concat([df.Age, age_band, pd.cut(df.Age, 5)], axis=1).head(10))
     y = df.Survived if is_train else None
@@ -58,10 +63,13 @@ def main():
     train_x, val_x, train_y, val_y = train_test_split(
         x, y, test_size=0.3, random_state=1, stratify=y)
 
-    lr = LogisticRegression()
+    c = 0.1
+    lr = LogisticRegression(C=c)
     lr.fit(train_x, train_y)
-
-    print("score: {}".format(lr.score(val_x, val_y)))
+    val_pred = lr.predict(val_x)
+    print("c: {}, score: {}".format(c, lr.score(val_x, val_y)))
+    print('-' * 20)
+    print(classification_report(val_y, val_pred))
 
     # pred = lr.predict(val_x)
     # print((pred == val_y).sum()/pred.size)
