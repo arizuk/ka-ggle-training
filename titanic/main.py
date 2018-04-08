@@ -54,19 +54,18 @@ def extract_feature(df, is_train):
     return (x, y)
 
 
-def make_model(name):
-    if name == 'lr':
-        c = 0.1
-        model = LogisticRegression(C=c)
-    elif name == 'random_forest':
-        model = RandomForestClassifier(n_estimators=100)
-    else:
-        raise Exception('Invalid model name')
-
-    return model
+def random_forest():
+    model = RandomForestClassifier(n_estimators=100)
+    return (model, 'random_forest')
 
 
-def main():
+def logistic_regression():
+    c = 0.1
+    model = LogisticRegression(C=c)
+    return (model, 'lr')
+
+
+def run(get_model, save=False):
     df = pd.read_csv('./input/train.csv')
     x, y = extract_feature(df, is_train=True)
     print('----- features')
@@ -76,12 +75,10 @@ def main():
     train_x, val_x, train_y, val_y = train_test_split(
         x, y, test_size=0.3, random_state=1, stratify=y)
 
-    model_name = 'random_forest'
-    model = make_model(model_name)
+    model, model_name = get_model()
     model.fit(train_x, train_y)
 
     val_pred = model.predict(val_x)
-    # print("c: {}, score: {}".format(c, model.score(val_x, val_y)))
     print("score: {}".format(model.score(val_x, val_y)))
     print('-' * 20)
     print(classification_report(val_y, val_pred))
@@ -89,15 +86,23 @@ def main():
     # pred = model.predict(val_x)
     # print((pred == val_y).sum()/pred.size)
 
-    test_df = pd.read_csv('./input/test.csv')
-    test_x, _ = extract_feature(test_df, is_train=False)
+    if save:
+        test_df = pd.read_csv('./input/test.csv')
+        test_x, _ = extract_feature(test_df, is_train=False)
 
-    pred = model.predict(test_x)
-    result = pd.DataFrame({
-        'PassengerId': test_df.PassengerId,
-        'Survived': pred
-        })
-    result.to_csv('./submissions/{}.csv'.format(model_name), index=False)
+        pred = model.predict(test_x)
+
+        result_csv = './submissions/{}.csv'.format(model_name)
+        result = pd.DataFrame({
+            'PassengerId': test_df.PassengerId,
+            'Survived': pred
+            })
+        result.to_csv(result_csv, index=False)
+        print('Save to {}'.format(result_csv))
+
+
+def main():
+    run(random_forest)
 
 
 if __name__ == '__main__':
