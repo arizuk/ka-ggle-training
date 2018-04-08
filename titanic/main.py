@@ -54,6 +54,24 @@ def extract_feature(df, is_train):
     return (x, y)
 
 
+def load_datasets(is_train):
+    if is_train:
+        df = pd.read_csv('./input/train.csv')
+        x, y = extract_feature(df, is_train=True)
+        print('----- features')
+        print(x.head())
+        print('-' * 20)
+
+        train_x, val_x, train_y, val_y = train_test_split(
+            x, y, test_size=0.3, random_state=1, stratify=y)
+
+        return (df, train_x, val_x, train_y, val_y)
+    else:
+        test_df = pd.read_csv('./input/test.csv')
+        test_x, _ = extract_feature(test_df, is_train=False)
+        return (test_df, test_x)
+
+
 def random_forest():
     model = RandomForestClassifier(n_estimators=100)
     return (model, 'random_forest')
@@ -65,15 +83,8 @@ def logistic_regression():
     return (model, 'lr')
 
 
-def run(get_model, save=False):
-    df = pd.read_csv('./input/train.csv')
-    x, y = extract_feature(df, is_train=True)
-    print('----- features')
-    print(x.head())
-    print('-' * 20)
-
-    train_x, val_x, train_y, val_y = train_test_split(
-        x, y, test_size=0.3, random_state=1, stratify=y)
+def run(get_model):
+    df, train_x, val_x, train_y, val_y = load_datasets(is_train=True)
 
     model, model_name = get_model()
     model.fit(train_x, train_y)
@@ -86,24 +97,20 @@ def run(get_model, save=False):
     # pred = model.predict(val_x)
     # print((pred == val_y).sum()/pred.size)
 
-    if save:
-        test_df = pd.read_csv('./input/test.csv')
-        test_x, _ = extract_feature(test_df, is_train=False)
+    (test_df, test_x) = load_datasets(is_train=False)
+    pred = model.predict(test_x)
 
-        pred = model.predict(test_x)
-
-        result_csv = './submissions/{}.csv'.format(model_name)
-        result = pd.DataFrame({
-            'PassengerId': test_df.PassengerId,
-            'Survived': pred
-            })
-        result.to_csv(result_csv, index=False)
-        print('Save to {}'.format(result_csv))
+    result_csv = './submissions/{}.csv'.format(model_name)
+    result = pd.DataFrame({
+        'PassengerId': test_df.PassengerId,
+        'Survived': pred
+        })
+    result.to_csv(result_csv, index=False)
+    print('Save to {}'.format(result_csv))
 
 
 def main():
     run(random_forest)
-
 
 if __name__ == '__main__':
     main()
