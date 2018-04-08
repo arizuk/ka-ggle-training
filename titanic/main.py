@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
@@ -44,13 +45,25 @@ def extract_feature(df, is_train):
         'Sex': sex,
         'Fare': fare,
         'Embarked': embarked,
-        'Cabin': cabin,
-        'FamilySize': family_size,
-        # 'IsAlone': is_alone,
+        # 'Cabin': cabin,
+        # 'FamilySize': family_size,
+        'IsAlone': is_alone,
     })
     # print(pd.concat([df.Age, age_band, pd.cut(df.Age, 5)], axis=1).head(10))
     y = df.Survived if is_train else None
     return (x, y)
+
+
+def make_model(name):
+    if name == 'lr':
+        c = 0.1
+        model = LogisticRegression(C=c)
+    elif name == 'random_forest':
+        model = RandomForestClassifier(n_estimators=100)
+    else:
+        raise Exception('Invalid model name')
+
+    return model
 
 
 def main():
@@ -63,26 +76,28 @@ def main():
     train_x, val_x, train_y, val_y = train_test_split(
         x, y, test_size=0.3, random_state=1, stratify=y)
 
-    c = 0.1
-    lr = LogisticRegression(C=c)
-    lr.fit(train_x, train_y)
-    val_pred = lr.predict(val_x)
-    print("c: {}, score: {}".format(c, lr.score(val_x, val_y)))
+    model_name = 'random_forest'
+    model = make_model(model_name)
+    model.fit(train_x, train_y)
+
+    val_pred = model.predict(val_x)
+    # print("c: {}, score: {}".format(c, model.score(val_x, val_y)))
+    print("score: {}".format(model.score(val_x, val_y)))
     print('-' * 20)
     print(classification_report(val_y, val_pred))
 
-    # pred = lr.predict(val_x)
+    # pred = model.predict(val_x)
     # print((pred == val_y).sum()/pred.size)
 
     test_df = pd.read_csv('./input/test.csv')
     test_x, _ = extract_feature(test_df, is_train=False)
 
-    pred = lr.predict(test_x)
+    pred = model.predict(test_x)
     result = pd.DataFrame({
         'PassengerId': test_df.PassengerId,
         'Survived': pred
         })
-    result.to_csv('./submissions/output.csv', index=False)
+    result.to_csv('./submissions/{}.csv'.format(model_name), index=False)
 
 
 if __name__ == '__main__':
