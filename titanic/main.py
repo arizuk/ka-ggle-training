@@ -4,73 +4,56 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
 
+def process_age(df):
+    age = df.Age.fillna(df.Age.dropna().mean())
+    return pd.cut(age, 5, labels=[1, 2, 3, 4, 5]).astype(int)
+
+
 def process_sex(df):
-    return df.Sex.apply(lambda x: 1 if x == 'male' else 2)
+    return df.Sex.map({'male': 0, 'female': 1})
 
 
 def process_embarked(df):
-    def convert(x):
-        if x == 'C':
-            return 1
-        elif x == 'Q':
-            return 2
-        elif x == 'S':
-            return 3
-        else:
-            return 0
-    return df.Embarked.apply(convert)
+    em = df.Embarked.fillna('S')
+    return em.map({'C': 0, 'Q': 1, 'S': 2})
 
 
 def process_cabin(df):
-    def conv(x):
-        if isinstance(x, str) and x != '':
-            return ord(x[0]) - 64
-        else:
-            return 0
-    return df.Cabin.apply(conv)
+    return df.Cabin
+
+
+def create_familzy_size(df):
+    return df.Parch + df.SibSp + 1
 
 
 def extract_feature(df, is_train):
-    columns = [
-        'Pclass',
-        'Age',
-        'Sex',
-        'Fare',
-        # 'Embarked',
-        # 'Cabin',
-        'Parch',
-    ]
+    age_band = process_age(df)
+    sex = process_sex(df)
+    embarked = process_embarked(df)
+    cabin = process_cabin(df)
+    family_size = create_familzy_size(df)
+    fare = df.Fare.fillna(df.Fare.dropna().mean())
 
-    y = None
-
-    if is_train:
-        columns = ['Survived'] + columns
-        df = df[columns].dropna(0)
-
-        x = df.iloc[:, 1:]
-        y = df.iloc[:, 0]
-    else:
-        x = df[columns].fillna(0) # TODO: 適当すぎる
-
-    if 'Sex' in x:
-        x['Sex'] = process_sex(df)
-
-    if 'Embarked' in x:
-        x['Embarked'] = process_embarked(df)
-
-    if 'Cabin' in x:
-        x['Cabin'] = process_cabin(df)
-
-    # print(x.head(10))
-    # import sys
-    # sys.exit()
-
+    x = pd.DataFrame({
+        'Pclass': df.Pclass,
+        'Age': age_band,
+        'Sex': sex,
+        'Fare': fare,
+        'Embarked': embarked,
+        # 'Cabin': cabin,
+        'FamilySize': family_size,
+    })
+    # print(pd.concat([df.Age, age_band, pd.cut(df.Age, 5)], axis=1).head(10))
+    y = df.Survived if is_train else None
     return (x, y)
 
 
 def main():
     df = pd.read_csv('./input/train.csv')
     x, y = extract_feature(df, is_train=True)
+    print('----- features')
+    print(x.head())
+    print('-' * 20)
 
     train_x, val_x, train_y, val_y = train_test_split(
         x, y, test_size=0.3, random_state=1, stratify=y)
