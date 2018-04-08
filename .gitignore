@@ -2,3 +2,4 @@ input/
 submissions/
 .vscode
 .ipynb_checkpoints/
+.envrc
